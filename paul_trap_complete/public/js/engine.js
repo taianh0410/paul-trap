@@ -1,120 +1,373 @@
-/* Reworked from the team's IonTrapPhysicsEngine: consistent 20s stages, moving attractors, fixed-step physics. */
-(function(global){
-'use strict';
-const STAGES=[
- {years:'1956–1966',name:'KHỞI NGUYÊN',subtitle:'Nền móng · Dao động điều hòa',color:'#42c8ff',noise:110,friction:.85,impulse:0},
- {years:'1966–1976',name:'KHÁNG CHIẾN',subtitle:'Xung lực · Phản xạ',color:'#ff537b',noise:120,friction:.80,impulse:.015,shockMin:2200,shockMax:3600},
- {years:'1976–1986',name:'TÁI THIẾT',subtitle:'Không gian ít ma sát',color:'#4de5df',noise:100,friction:.995,impulse:0},
- {years:'1986–1996',name:'ĐỔI MỚI',subtitle:'Khối lượng biến thiên',color:'#ffd166',noise:110,friction:.85,mass:true,bohr:true},
- {years:'1996–2006',name:'HỘI NHẬP',subtitle:'Các điểm hấp dẫn di động',color:'#b68cff',noise:110,friction:.82,attractors:true,blackHoleRadius:24,blackHoleStrength:280000},
- {years:'2006–2016',name:'VƯƠN TẦM',subtitle:'Xoay hệ tọa độ',color:'#ff81c5',noise:120,friction:.82,rotation:true,rotationSpeed:.02},
- {years:'2016–2026',name:'CHUYỂN ĐỔI SỐ',subtitle:'Hỗn loạn lượng tử',color:'#a8ff78',noise:160,friction:.995,impulse:.02,shockMin:2200,shockMax:3600,mass:true,bohr:true,rotation:true,rotationSpeed:.045,attractors:true,blackHoleRadius:36,blackHoleStrength:450000}
+
+const DECADE_CONFIGS = [
+    {
+        decade: 1, years: "1956 - 1966", name: "Khởi nguyên",
+        friction: 0.85, massVariable: false, bohrLevelVariable: false,
+        shockFreq: 0, hasCenterBlackHole: false, coordRotationSpeed: 0,
+        noiseAmp: 110, color: "#38bdf8"
+    },
+    {
+        decade: 2, years: "1966 - 1976", name: "Kháng chiến",
+        friction: 0.85, massVariable: false, bohrLevelVariable: false,
+        shockFreq: 0.015, shockForceMin: 2500, shockForceMax: 4000, shockDuration: 0.15,
+        hasCenterBlackHole: false, coordRotationSpeed: 0, noiseAmp: 120, color: "#ff2a6d"
+    },
+    {
+        decade: 3, years: "1976 - 1986", name: "Tái thiết",
+        friction: 0.97, massVariable: false, bohrLevelVariable: false,
+        shockFreq: 0, hasCenterBlackHole: false, coordRotationSpeed: 0,
+        noiseAmp: 100, color: "#00f0ff"
+    },
+    {
+        decade: 4, years: "1986 - 1996", name: "Đổi mới",
+        friction: 0.85, massVariable: true, bohrLevelVariable: true,
+        shockFreq: 0, hasCenterBlackHole: false, coordRotationSpeed: 0,
+        noiseAmp: 110, color: "#ffe600"
+    },
+    {
+        decade: 5, years: "1996 - 2006", name: "Hội nhập",
+        friction: 0.85, massVariable: false, bohrLevelVariable: false,
+        shockFreq: 0, hasCenterBlackHole: true, blackHoleRadius: 24, blackHoleStrength: 280000,
+        coordRotationSpeed: 0, noiseAmp: 110, color: "#a855f7"
+    },
+    {
+        decade: 6, years: "2006 - 2016", name: "Vươn tầm",
+        friction: 0.85, massVariable: false, bohrLevelVariable: false,
+        shockFreq: 0, hasCenterBlackHole: false,
+        coordRotationSpeed: 0.02, noiseAmp: 120, color: "#ec4899"
+    },
+    {
+        decade: 7, years: "2016 - 2026", name: "Chuyển đổi số (Quantum Chaos)",
+        friction: 0.95, massVariable: true, bohrLevelVariable: true,
+        shockFreq: 0.02, shockForceMin: 3000, shockForceMax: 5000, shockDuration: 0.15,
+        hasCenterBlackHole: true, blackHoleRadius: 36, blackHoleStrength: 450000,
+        coordRotationSpeed: 0.045, noiseAmp: 160, isChaos: true, color: "#39ff14"
+    }
 ];
-const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-class IonTrapPhysicsEngine{
- constructor(){this.radius=260;this.reset();}
- reset(){
-  this.stage=1;this.t=0;this.x=0;this.y=0;this.vx=0;this.vy=0;
-  this.beta=0;this.gamma=0;this.inputX=0;this.inputY=0;
-  this.trail=[];this.shock=0;this.shockAngle=0;this.dead=false;
-  this.bohrLevel=1;this.mass=1;this.bohrTimer=0;this.rotationAngle=0;
-  this.afkTimer=0;this.afkWarnings=0;this.lastInputX=0;this.lastInputY=0;
- }
- startStage(n){
-  this.stage=clamp(n,1,7);this.t=0;this.dead=false;
-  this.x=0;this.y=0;this.vx=0;this.vy=0;this.trail=[];
-  this.shock=0;this.bohrTimer=0;this.bohrLevel=1;this.mass=1;
-  this.rotationAngle=0;this.afkTimer=0;this.afkWarnings=0;
-  this.lastInputX=this.gamma/30;this.lastInputY=this.beta/30;
-  const c=this.config;
-  const minR=c.attractors?c.blackHoleRadius+35:this.radius*.2;
-  const maxR=this.radius*.55;
-  const r=minR+Math.random()*Math.max(0,maxR-minR);
-  const a=Math.random()*Math.PI*2;
-  this.x=r*Math.cos(a);this.y=r*Math.sin(a);
- }
- handleSocketSyncData(beta,gamma){
-  if(!Number.isFinite(beta)||!Number.isFinite(gamma))return;
-  this.beta=clamp(beta,-45,45);this.gamma=clamp(gamma,-45,45);
- }
- get config(){return STAGES[this.stage-1];}
- get attractors(){
-  // Match the supplied reference engine: a central black hole in stages 5 and 7.
-  return this.config.attractors?[{x:0,y:0,r:this.config.blackHoleRadius}]:[];
- }
- update(dt){
-  if(this.dead)return null;
-  dt=clamp(dt,0,1/30);this.t+=dt;
-  const c=this.config;
-  const targetX=clamp(this.gamma/30,-1,1);
-  const targetY=clamp(this.beta/30,-1,1);
-  const delta=Math.hypot(targetX-this.lastInputX,targetY-this.lastInputY);
-  if(delta<.018){
-   this.afkTimer+=dt;
-   if(this.afkTimer>=3){
-    this.afkTimer=0;this.afkWarnings++;
-    if(this.afkWarnings>=3){this.dead=true;return 'afk';}
-    return 'afk_warning';
-   }
-  }else{
-   this.afkTimer=0;this.lastInputX=targetX;this.lastInputY=targetY;
-  }
-  // Reference smoothing is 0.25 per 60 Hz frame.
-  const blend=1-Math.pow(.75,dt*60);
-  this.inputX+=(targetX-this.inputX)*blend;
-  this.inputY+=(targetY-this.inputY)*blend;
-  if(c.bohr){
-   this.bohrTimer+=dt;
-   if(this.bohrTimer>=2){this.bohrTimer=0;this.bohrLevel=Math.floor(Math.random()*10)+1;}
-  }else{this.bohrLevel=1;this.bohrTimer=0;}
-  this.mass=c.mass ? (0.2+this.bohrLevel/10*1.8) : 1;
-  let centrifugalX=0,centrifugalY=0;
-  if(c.rotation){
-   const speed=c.rotationSpeed+this.t*.0025;
-   this.rotationAngle+=speed*dt*60;
-   const d=Math.hypot(this.x,this.y);
-   if(d>0){
-    const magnitude=this.mass*Math.pow(speed*12,2)*d*.75;
-    centrifugalX=this.x/d*magnitude;centrifugalY=this.y/d*magnitude;
-   }
-  }else this.rotationAngle=0;
-  const cr=Math.cos(this.rotationAngle),sr=Math.sin(this.rotationAngle);
-  let fx=(this.inputX*cr-this.inputY*sr)*650;
-  let fy=(this.inputX*sr+this.inputY*cr)*650;
-  const noiseTime=this.t*2;
-  fx+=Math.sin(noiseTime)*c.noise+Math.cos(noiseTime*1.7)*50;
-  fy+=Math.cos(noiseTime*1.3)*c.noise+Math.sin(noiseTime*2.1)*50;
-  let event=null;
-  // Convert reference per-frame shock probability to a time-step-independent one.
-  if(c.impulse&&this.shock<=0&&Math.random()<1-Math.pow(1-c.impulse,dt*60)){
-   this.shock=.15;this.shockAngle=Math.random()*Math.PI*2;
-   this.shockForce=c.shockMin+Math.random()*(c.shockMax-c.shockMin);
-   event='shock';
-  }
-  if(this.shock>0){
-   this.shock=Math.max(0,this.shock-dt);
-   fx+=Math.cos(this.shockAngle)*this.shockForce;
-   fy+=Math.sin(this.shockAngle)*this.shockForce;
-  }
-  if(c.attractors){
-   const d=Math.hypot(this.x,this.y);
-   if(d<=c.blackHoleRadius){this.dead=true;return 'attractor';}
-   const force=c.blackHoleStrength/(Math.pow(d,1.5)+30);
-   fx-=this.x/d*force;fy-=this.y/d*force;
-  }
-  fx+=centrifugalX;fy+=centrifugalY;
-  this.vx+=fx/this.mass*dt;this.vy+=fy/this.mass*dt;
-  const drag=Math.pow(c.friction,dt*60);
-  this.vx*=drag;this.vy*=drag;
-  this.x+=this.vx*dt;this.y+=this.vy*dt;
-  this.trail.push({x:this.x,y:this.y});if(this.trail.length>22)this.trail.shift();
-  const particleRadius=12*(c.mass?Math.sqrt(this.mass):1);
-  if(Math.hypot(this.x,this.y)+particleRadius>=this.radius){
-   this.dead=true;return 'boundary';
-  }
-  return event;
- }
+
+class IonTrapPhysicsEngine {
+    constructor(canvasWidth, canvasHeight) {
+        this.width = canvasWidth;
+        this.height = canvasHeight;
+        this.center = { x: canvasWidth / 2, y: canvasHeight / 2 };
+        this.trapRadius = Math.min(canvasWidth, canvasHeight) * 0.38;
+
+        this.particle = {
+            pos: { x: this.center.x, y: this.center.y },
+            vel: { x: 0, y: 0 },
+            acc: { x: 0, y: 0 },
+            baseRadius: 12,
+            mass: 1.0,
+            bohrLevel: 1,
+            trail: []
+        };
+
+        this.inputVector = { x: 0, y: 0 };
+        this.smoothInput = { x: 0, y: 0 };
+
+        this.afk = {
+            epsilon: 0.018,
+            timer: 0,
+            warnings: 0,
+            checkInterval: 3,
+            lastInput: { x: 0, y: 0 }
+        };
+
+        this.bohrTimer = 0;
+        this.stageTime = 0;
+        this.coordRotation = 0;
+        this.noiseTime = 0;
+        this.shockVector = { x: 0, y: 0, duration: 0 };
+    }
+
+    spawnRandomSafe(stageConfig) {
+        const minR = stageConfig.hasCenterBlackHole
+            ? (stageConfig.blackHoleRadius + 35)
+            : (this.trapRadius * 0.2);
+        const maxR = this.trapRadius * 0.55;
+
+        const r = minR + Math.random() * (maxR - minR);
+        const theta = Math.random() * Math.PI * 2;
+
+        this.particle.pos = {
+            x: this.center.x + r * Math.cos(theta),
+            y: this.center.y + r * Math.sin(theta)
+        };
+        this.particle.vel = { x: 0, y: 0 };
+        this.particle.acc = { x: 0, y: 0 };
+        this.particle.trail = [];
+
+        this.bohrTimer = 0;
+        this.stageTime = 0;
+        this.coordRotation = 0;
+        this.afk.timer = 0;
+        this.afk.lastInput = { x: this.inputVector.x, y: this.inputVector.y };
+    }
+
+    handleSocketSyncData(beta, gamma) {
+        const normX = Math.max(-1, Math.min(1, (gamma || 0) / 30));
+        const normY = Math.max(-1, Math.min(1, (beta || 0) / 30));
+
+        this.inputVector.x = normX;
+        this.inputVector.y = normY;
+    }
+
+    getCurrentStageConfig(totalElapsedTimeSec) {
+        const stageIndex = Math.min(6, Math.floor(totalElapsedTimeSec / 20));
+        return DECADE_CONFIGS[stageIndex];
+    }
+
+    update(dt, stageConfig, globalTime, callbacks) {
+        this.stageTime += dt;
+
+        const inputDelta = Math.hypot(
+            this.inputVector.x - this.afk.lastInput.x,
+            this.inputVector.y - this.afk.lastInput.y
+        );
+
+        if (inputDelta < this.afk.epsilon) {
+            this.afk.timer += dt;
+            if (this.afk.timer >= this.afk.checkInterval) {
+                this.afk.timer = 0;
+                this.afk.warnings++;
+
+                if (callbacks.onAFKWarning) {
+                    callbacks.onAFKWarning(this.afk.warnings);
+                }
+
+                if (this.afk.warnings >= 3) {
+                    if (callbacks.onDisqualify) {
+                        callbacks.onDisqualify("LOẠI DO AFK: Giữ nguyên máy quá 3 lần cảnh báo!");
+                    }
+                    return;
+                }
+            }
+        } else {
+            this.afk.timer = 0;
+            this.afk.lastInput = { x: this.inputVector.x, y: this.inputVector.y };
+        }
+
+        this.smoothInput.x += (this.inputVector.x - this.smoothInput.x) * 0.25;
+        this.smoothInput.y += (this.inputVector.y - this.smoothInput.y) * 0.25;
+
+        if (stageConfig.bohrLevelVariable) {
+            this.bohrTimer += dt;
+            if (this.bohrTimer >= 2.0 || !this.particle.bohrLevel) {
+                this.bohrTimer = 0;
+                this.particle.bohrLevel = Math.floor(Math.random() * 10) + 1;
+            }
+        } else {
+            this.bohrTimer = 0;
+            this.particle.bohrLevel = stageConfig.bohrLevel || 1;
+        }
+
+        if (stageConfig.massVariable) {
+            this.particle.mass = 0.2 + (this.particle.bohrLevel / 10.0) * 1.8;
+        } else {
+            this.particle.mass = stageConfig.mass || 1.0;
+        }
+
+        let F_centrifugal_x = 0, F_centrifugal_y = 0;
+        if (stageConfig.coordRotationSpeed > 0) {
+            const currentRotSpeed = stageConfig.coordRotationSpeed + (this.stageTime * 0.0025);
+            this.coordRotation += currentRotSpeed * dt * 60;
+
+            const dx = this.particle.pos.x - this.center.x;
+            const dy = this.particle.pos.y - this.center.y;
+            const distFromCenter = Math.hypot(dx, dy);
+
+            if (distFromCenter > 0) {
+                const cfMagnitude = this.particle.mass * Math.pow(currentRotSpeed * 12, 2) * distFromCenter * 0.75;
+                F_centrifugal_x = (dx / distFromCenter) * cfMagnitude;
+                F_centrifugal_y = (dy / distFromCenter) * cfMagnitude;
+            }
+        } else {
+            this.coordRotation = 0;
+        }
+
+        const cosR = Math.cos(this.coordRotation);
+        const sinR = Math.sin(this.coordRotation);
+        const F_player_x = (this.smoothInput.x * cosR - this.smoothInput.y * sinR) * 650;
+        const F_player_y = (this.smoothInput.x * sinR + this.smoothInput.y * cosR) * 650;
+
+        this.noiseTime += dt * 2;
+        const F_noise_x = Math.sin(this.noiseTime) * stageConfig.noiseAmp + Math.cos(this.noiseTime * 1.7) * 50;
+        const F_noise_y = Math.cos(this.noiseTime * 1.3) * stageConfig.noiseAmp + Math.sin(this.noiseTime * 2.1) * 50;
+
+        let F_shock_x = 0, F_shock_y = 0;
+        if (stageConfig.shockFreq > 0) {
+            if (this.shockVector.duration <= 0 && Math.random() < stageConfig.shockFreq) {
+                const angle = Math.random() * Math.PI * 2;
+                const forceMag = (stageConfig.shockForceMin || 2200) + Math.random() * ((stageConfig.shockForceMax || 3600) - (stageConfig.shockForceMin || 2200));
+                this.shockVector = {
+                    x: Math.cos(angle) * forceMag,
+                    y: Math.sin(angle) * forceMag,
+                    duration: stageConfig.shockDuration || 0.15
+                };
+                if (callbacks.onShockWave) callbacks.onShockWave();
+            }
+        }
+
+        if (this.shockVector.duration > 0) {
+            this.shockVector.duration -= dt;
+            F_shock_x = this.shockVector.x;
+            F_shock_y = this.shockVector.y;
+        }
+
+        let F_bh_x = 0, F_bh_y = 0;
+        if (stageConfig.hasCenterBlackHole) {
+            const dx = this.center.x - this.particle.pos.x;
+            const dy = this.center.y - this.particle.pos.y;
+            const distToCenter = Math.hypot(dx, dy);
+
+            if (distToCenter <= stageConfig.blackHoleRadius) {
+                if (callbacks.onGameOver) {
+                    callbacks.onGameOver("HẠT ĐÃ BỊ HÚT VÀO TÂM HỐ ĐEN TRUNG TÂM!");
+                }
+                return;
+            }
+
+            const forceMag = stageConfig.blackHoleStrength / (Math.pow(distToCenter, 1.5) + 30);
+            F_bh_x = (dx / distToCenter) * forceMag;
+            F_bh_y = (dy / distToCenter) * forceMag;
+        }
+
+        const F_net_x = F_player_x + F_noise_x + F_shock_x + F_bh_x + F_centrifugal_x;
+        const F_net_y = F_player_y + F_noise_y + F_shock_y + F_bh_y + F_centrifugal_y;
+
+        this.particle.acc.x = F_net_x / this.particle.mass;
+        this.particle.acc.y = F_net_y / this.particle.mass;
+
+        this.particle.vel.x += this.particle.acc.x * dt;
+        this.particle.vel.y += this.particle.acc.y * dt;
+
+        const drag = Math.pow(stageConfig.friction, dt * 60);
+        this.particle.vel.x *= drag;
+        this.particle.vel.y *= drag;
+
+        this.particle.pos.x += this.particle.vel.x * dt;
+        this.particle.pos.y += this.particle.vel.y * dt;
+
+        this.particle.trail.unshift({ x: this.particle.pos.x, y: this.particle.pos.y });
+        if (this.particle.trail.length > 22) this.particle.trail.pop();
+
+        const currentRadius = this.particle.baseRadius * (stageConfig.massVariable ? Math.sqrt(this.particle.mass) : 1.0);
+        const distFromCenter = Math.hypot(this.particle.pos.x - this.center.x, this.particle.pos.y - this.center.y);
+
+        if (distFromCenter + currentRadius >= this.trapRadius) {
+            if (callbacks.onGameOver) {
+                callbacks.onGameOver("Hạt Electron đã va chạm mạnh vào viền bẫy từ trường!");
+            }
+            return;
+        }
+    }
 }
 
-global.PaulTrap={IonTrapPhysicsEngine,STAGES,STAGE_SECONDS:20};
+// Compatibility with existing Paul Trap display and Socket.IO client.
+// The reference physics code above remains unchanged.
+(function (global) {
+    'use strict';
+
+    const STAGE_SECONDS = 20;
+
+    const STAGES = DECADE_CONFIGS.map(config => ({
+        years: config.years,
+        name: config.name.toUpperCase(),
+        subtitle: config.hasCenterBlackHole ? 'Hố đen trung tâm' :
+                  config.coordRotationSpeed > 0 ? 'Xoay hệ tọa độ' :
+                  config.massVariable ? 'Khối lượng và mức Bohr biến thiên' :
+                  config.shockFreq > 0 ? 'Xung lực ngẫu nhiên' : 'Điều khiển hạt',
+        color: config.color,
+        rotation: config.coordRotationSpeed > 0,
+        reference: config
+    }));
+
+    class DisplayCompatibleEngine extends IonTrapPhysicsEngine {
+        constructor() {
+            const logicalSize = 260 / 0.38;
+            super(logicalSize, logicalSize);
+            this.stage = 1;
+            this.dead = false;
+        }
+
+        reset() {
+            const fresh = new IonTrapPhysicsEngine(this.width, this.height);
+            this.particle = fresh.particle;
+            this.inputVector = fresh.inputVector;
+            this.smoothInput = fresh.smoothInput;
+            this.afk = fresh.afk;
+            this.bohrTimer = fresh.bohrTimer;
+            this.stageTime = fresh.stageTime;
+            this.coordRotation = fresh.coordRotation;
+            this.noiseTime = fresh.noiseTime;
+            this.shockVector = fresh.shockVector;
+            this.stage = 1;
+            this.dead = false;
+        }
+
+        startStage(n) {
+            this.stage = Math.max(1, Math.min(7, n));
+            this.dead = false;
+            this.spawnRandomSafe(DECADE_CONFIGS[this.stage - 1]);
+        }
+
+        get radius() { return this.trapRadius; }
+        get x() { return this.particle.pos.x - this.center.x; }
+        get y() { return this.particle.pos.y - this.center.y; }
+        get vx() { return this.particle.vel.x; }
+        get vy() { return this.particle.vel.y; }
+        get beta() { return this.inputVector.y * 30; }
+        get gamma() { return this.inputVector.x * 30; }
+        get t() { return this.stageTime; }
+        get mass() { return this.particle.mass; }
+        get bohrLevel() { return this.particle.bohrLevel; }
+        get afkWarnings() { return this.afk.warnings; }
+
+        get trail() {
+            return this.particle.trail.map(p => ({
+                x: p.x - this.center.x,
+                y: p.y - this.center.y
+            }));
+        }
+
+        get attractors() {
+            const c = DECADE_CONFIGS[this.stage - 1];
+            return c.hasCenterBlackHole
+                ? [{ x: 0, y: 0, r: c.blackHoleRadius }]
+                : [];
+        }
+
+        update(dt) {
+            if (this.dead) return null;
+
+            let event = null;
+            const callbacks = {
+                onAFKWarning: () => { event = 'afk_warning'; },
+                onDisqualify: () => { this.dead = true; event = 'afk'; },
+                onShockWave: () => { event = 'shock'; },
+                onGameOver: reason => {
+                    this.dead = true;
+                    event = reason.includes('HỐ ĐEN')
+                        ? 'attractor'
+                        : 'boundary';
+                }
+            };
+
+            super.update(
+                dt,
+                DECADE_CONFIGS[this.stage - 1],
+                this.stageTime,
+                callbacks
+            );
+            return event;
+        }
+    }
+
+    global.PaulTrap = {
+        IonTrapPhysicsEngine: DisplayCompatibleEngine,
+        OriginalIonTrapPhysicsEngine: IonTrapPhysicsEngine,
+        DECADE_CONFIGS,
+        STAGES,
+        STAGE_SECONDS
+    };
 })(window);

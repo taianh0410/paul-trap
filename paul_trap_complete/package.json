@@ -1,0 +1,19 @@
+{
+  "name": "paul-trap-complete",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Paul Trap 7-decade interactive exhibit",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1",
+    "qrcode": "^1.5.4"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

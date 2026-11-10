@@ -101,7 +101,10 @@ class IonTrapPhysicsEngine {
         this.stageTime = 0;
         this.coordRotation = 0;
         this.afk.timer = 0;
-        this.afk.lastInput = { x: this.inputVector.x, y: this.inputVector.y };
+        this.afk.lastInput = {
+            x: this.inputVector.x,
+            y: this.inputVector.y
+        };
     }
 
     handleSocketSyncData(beta, gamma) {
@@ -113,7 +116,10 @@ class IonTrapPhysicsEngine {
     }
 
     getCurrentStageConfig(totalElapsedTimeSec) {
-        const stageIndex = Math.min(6, Math.floor(totalElapsedTimeSec / 20));
+        const stageIndex = Math.min(
+            6,
+            Math.floor(totalElapsedTimeSec / 20)
+        );
         return DECADE_CONFIGS[stageIndex];
     }
 
@@ -127,6 +133,7 @@ class IonTrapPhysicsEngine {
 
         if (inputDelta < this.afk.epsilon) {
             this.afk.timer += dt;
+
             if (this.afk.timer >= this.afk.checkInterval) {
                 this.afk.timer = 0;
                 this.afk.warnings++;
@@ -137,39 +144,55 @@ class IonTrapPhysicsEngine {
 
                 if (this.afk.warnings >= 3) {
                     if (callbacks.onDisqualify) {
-                        callbacks.onDisqualify("LOẠI DO AFK: Giữ nguyên máy quá 3 lần cảnh báo!");
+                        callbacks.onDisqualify(
+                            "LOẠI DO AFK: Giữ nguyên máy quá 3 lần cảnh báo!"
+                        );
                     }
                     return;
                 }
             }
         } else {
             this.afk.timer = 0;
-            this.afk.lastInput = { x: this.inputVector.x, y: this.inputVector.y };
+            this.afk.lastInput = {
+                x: this.inputVector.x,
+                y: this.inputVector.y
+            };
         }
 
-        this.smoothInput.x += (this.inputVector.x - this.smoothInput.x) * 0.25;
-        this.smoothInput.y += (this.inputVector.y - this.smoothInput.y) * 0.25;
+        this.smoothInput.x +=
+            (this.inputVector.x - this.smoothInput.x) * 0.25;
+        this.smoothInput.y +=
+            (this.inputVector.y - this.smoothInput.y) * 0.25;
 
         if (stageConfig.bohrLevelVariable) {
             this.bohrTimer += dt;
+
             if (this.bohrTimer >= 2.0 || !this.particle.bohrLevel) {
                 this.bohrTimer = 0;
-                this.particle.bohrLevel = Math.floor(Math.random() * 10) + 1;
+                this.particle.bohrLevel =
+                    Math.floor(Math.random() * 10) + 1;
             }
         } else {
             this.bohrTimer = 0;
-            this.particle.bohrLevel = stageConfig.bohrLevel || 1;
+            this.particle.bohrLevel =
+                stageConfig.bohrLevel || 1;
         }
 
         if (stageConfig.massVariable) {
-            this.particle.mass = 0.2 + (this.particle.bohrLevel / 10.0) * 1.8;
+            this.particle.mass =
+                0.2 + (this.particle.bohrLevel / 10.0) * 1.8;
         } else {
             this.particle.mass = stageConfig.mass || 1.0;
         }
 
-        let F_centrifugal_x = 0, F_centrifugal_y = 0;
+        let F_centrifugal_x = 0;
+        let F_centrifugal_y = 0;
+
         if (stageConfig.coordRotationSpeed > 0) {
-            const currentRotSpeed = stageConfig.coordRotationSpeed + (this.stageTime * 0.0025);
+            const currentRotSpeed =
+                stageConfig.coordRotationSpeed +
+                (this.stageTime * 0.0025);
+
             this.coordRotation += currentRotSpeed * dt * 60;
 
             const dx = this.particle.pos.x - this.center.x;
@@ -177,9 +200,15 @@ class IonTrapPhysicsEngine {
             const distFromCenter = Math.hypot(dx, dy);
 
             if (distFromCenter > 0) {
-                const cfMagnitude = this.particle.mass * Math.pow(currentRotSpeed * 12, 2) * distFromCenter * 0.75;
-                F_centrifugal_x = (dx / distFromCenter) * cfMagnitude;
-                F_centrifugal_y = (dy / distFromCenter) * cfMagnitude;
+                const cfMagnitude =
+                    this.particle.mass *
+                    Math.pow(currentRotSpeed * 12, 2) *
+                    distFromCenter * 0.75;
+
+                F_centrifugal_x =
+                    (dx / distFromCenter) * cfMagnitude;
+                F_centrifugal_y =
+                    (dy / distFromCenter) * cfMagnitude;
             }
         } else {
             this.coordRotation = 0;
@@ -187,24 +216,51 @@ class IonTrapPhysicsEngine {
 
         const cosR = Math.cos(this.coordRotation);
         const sinR = Math.sin(this.coordRotation);
-        const F_player_x = (this.smoothInput.x * cosR - this.smoothInput.y * sinR) * 650;
-        const F_player_y = (this.smoothInput.x * sinR + this.smoothInput.y * cosR) * 650;
+
+        const F_player_x =
+            (this.smoothInput.x * cosR -
+             this.smoothInput.y * sinR) * 650;
+
+        const F_player_y =
+            (this.smoothInput.x * sinR +
+             this.smoothInput.y * cosR) * 650;
 
         this.noiseTime += dt * 2;
-        const F_noise_x = Math.sin(this.noiseTime) * stageConfig.noiseAmp + Math.cos(this.noiseTime * 1.7) * 50;
-        const F_noise_y = Math.cos(this.noiseTime * 1.3) * stageConfig.noiseAmp + Math.sin(this.noiseTime * 2.1) * 50;
 
-        let F_shock_x = 0, F_shock_y = 0;
+        const F_noise_x =
+            Math.sin(this.noiseTime) * stageConfig.noiseAmp +
+            Math.cos(this.noiseTime * 1.7) * 50;
+
+        const F_noise_y =
+            Math.cos(this.noiseTime * 1.3) * stageConfig.noiseAmp +
+            Math.sin(this.noiseTime * 2.1) * 50;
+
+        let F_shock_x = 0;
+        let F_shock_y = 0;
+
         if (stageConfig.shockFreq > 0) {
-            if (this.shockVector.duration <= 0 && Math.random() < stageConfig.shockFreq) {
+            if (
+                this.shockVector.duration <= 0 &&
+                Math.random() < stageConfig.shockFreq
+            ) {
                 const angle = Math.random() * Math.PI * 2;
-                const forceMag = (stageConfig.shockForceMin || 2200) + Math.random() * ((stageConfig.shockForceMax || 3600) - (stageConfig.shockForceMin || 2200));
+
+                const forceMag =
+                    (stageConfig.shockForceMin || 2200) +
+                    Math.random() * (
+                        (stageConfig.shockForceMax || 3600) -
+                        (stageConfig.shockForceMin || 2200)
+                    );
+
                 this.shockVector = {
                     x: Math.cos(angle) * forceMag,
                     y: Math.sin(angle) * forceMag,
                     duration: stageConfig.shockDuration || 0.15
                 };
-                if (callbacks.onShockWave) callbacks.onShockWave();
+
+                if (callbacks.onShockWave) {
+                    callbacks.onShockWave();
+                }
             }
         }
 
@@ -214,7 +270,9 @@ class IonTrapPhysicsEngine {
             F_shock_y = this.shockVector.y;
         }
 
-        let F_bh_x = 0, F_bh_y = 0;
+        let F_bh_x = 0;
+        let F_bh_y = 0;
+
         if (stageConfig.hasCenterBlackHole) {
             const dx = this.center.x - this.particle.pos.x;
             const dy = this.center.y - this.particle.pos.y;
@@ -222,61 +280,159 @@ class IonTrapPhysicsEngine {
 
             if (distToCenter <= stageConfig.blackHoleRadius) {
                 if (callbacks.onGameOver) {
-                    callbacks.onGameOver("HẠT ĐÃ BỊ HÚT VÀO TÂM HỐ ĐEN TRUNG TÂM!");
+                    callbacks.onGameOver(
+                        "HẠT ĐÃ BỊ HÚT VÀO TÂM HỐ ĐEN TRUNG TÂM!"
+                    );
                 }
                 return;
             }
 
-            const forceMag = stageConfig.blackHoleStrength / (Math.pow(distToCenter, 1.5) + 30);
+            const forceMag =
+                stageConfig.blackHoleStrength /
+                (Math.pow(distToCenter, 1.5) + 30);
+
             F_bh_x = (dx / distToCenter) * forceMag;
             F_bh_y = (dy / distToCenter) * forceMag;
         }
 
-        const F_net_x = F_player_x + F_noise_x + F_shock_x + F_bh_x + F_centrifugal_x;
-        const F_net_y = F_player_y + F_noise_y + F_shock_y + F_bh_y + F_centrifugal_y;
+        const F_net_x =
+            F_player_x +
+            F_noise_x +
+            F_shock_x +
+            F_bh_x +
+            F_centrifugal_x;
 
-        this.particle.acc.x = F_net_x / this.particle.mass;
-        this.particle.acc.y = F_net_y / this.particle.mass;
+        const F_net_y =
+            F_player_y +
+            F_noise_y +
+            F_shock_y +
+            F_bh_y +
+            F_centrifugal_y;
+
+        this.particle.acc.x =
+            F_net_x / this.particle.mass;
+        this.particle.acc.y =
+            F_net_y / this.particle.mass;
 
         this.particle.vel.x += this.particle.acc.x * dt;
         this.particle.vel.y += this.particle.acc.y * dt;
 
-        const drag = Math.pow(stageConfig.friction, dt * 60);
+        const drag =
+            Math.pow(stageConfig.friction, dt * 60);
+
         this.particle.vel.x *= drag;
         this.particle.vel.y *= drag;
 
         this.particle.pos.x += this.particle.vel.x * dt;
         this.particle.pos.y += this.particle.vel.y * dt;
 
-        this.particle.trail.unshift({ x: this.particle.pos.x, y: this.particle.pos.y });
-        if (this.particle.trail.length > 22) this.particle.trail.pop();
+        this.particle.trail.unshift({
+            x: this.particle.pos.x,
+            y: this.particle.pos.y
+        });
 
-        const currentRadius = this.particle.baseRadius * (stageConfig.massVariable ? Math.sqrt(this.particle.mass) : 1.0);
-        const distFromCenter = Math.hypot(this.particle.pos.x - this.center.x, this.particle.pos.y - this.center.y);
+        if (this.particle.trail.length > 22) {
+            this.particle.trail.pop();
+        }
 
-        if (distFromCenter + currentRadius >= this.trapRadius) {
+        const currentRadius =
+            this.particle.baseRadius *
+            (stageConfig.massVariable
+                ? Math.sqrt(this.particle.mass)
+                : 1.0);
+
+        const distFromCenter = Math.hypot(
+            this.particle.pos.x - this.center.x,
+            this.particle.pos.y - this.center.y
+        );
+
+        if (
+            distFromCenter + currentRadius >=
+            this.trapRadius
+        ) {
             if (callbacks.onGameOver) {
-                callbacks.onGameOver("Hạt Electron đã va chạm mạnh vào viền bẫy từ trường!");
+                callbacks.onGameOver(
+                    "Hạt Electron đã va chạm mạnh vào viền bẫy từ trường!"
+                );
             }
             return;
         }
     }
 }
 
-// Compatibility with existing Paul Trap display and Socket.IO client.
-// The reference physics code above remains unchanged.
+// ==========================================================
+// LỚP TƯƠNG THÍCH VỚI GAME PAUL TRAP HIỆN TẠI
+// Giữ nguyên DECADE_CONFIGS và công thức engine phía trên.
+// ==========================================================
+
 (function (global) {
     'use strict';
 
     const STAGE_SECONDS = 20;
+    const DIFFICULTY_MULTIPLIER = 1.5;
+    const ARENA_MULTIPLIER = 1.5;
+
+    // Màn 1: 1x; màn 2: 1.5x; ... màn 7: 11.390625x
+    const DIFFICULTY_CONFIGS = DECADE_CONFIGS.map(
+        (base, index) => {
+            const difficulty =
+                Math.pow(DIFFICULTY_MULTIPLIER, index);
+
+            return {
+                ...base,
+                difficulty,
+
+                noiseAmp: base.noiseAmp * difficulty,
+
+                // Ma sát gần 1 hơn -> khó hãm hạt hơn
+                friction: Math.pow(
+                    base.friction,
+                    1 / difficulty
+                ),
+
+                // Xác suất sốc vẫn nằm trong [0,1]
+                shockFreq: base.shockFreq
+                    ? 1 - Math.pow(
+                        1 - base.shockFreq,
+                        difficulty
+                    )
+                    : 0,
+
+                shockForceMin:
+                    base.shockForceMin == null
+                        ? undefined
+                        : base.shockForceMin * difficulty,
+
+                shockForceMax:
+                    base.shockForceMax == null
+                        ? undefined
+                        : base.shockForceMax * difficulty,
+
+                blackHoleStrength:
+                    base.blackHoleStrength == null
+                        ? undefined
+                        : base.blackHoleStrength * difficulty,
+
+                coordRotationSpeed:
+                    base.coordRotationSpeed * difficulty
+            };
+        }
+    );
 
     const STAGES = DECADE_CONFIGS.map(config => ({
         years: config.years,
         name: config.name.toUpperCase(),
-        subtitle: config.hasCenterBlackHole ? 'Hố đen trung tâm' :
-                  config.coordRotationSpeed > 0 ? 'Xoay hệ tọa độ' :
-                  config.massVariable ? 'Khối lượng và mức Bohr biến thiên' :
-                  config.shockFreq > 0 ? 'Xung lực ngẫu nhiên' : 'Điều khiển hạt',
+
+        subtitle: config.hasCenterBlackHole
+            ? 'Hố đen trung tâm'
+            : config.coordRotationSpeed > 0
+                ? 'Xoay hệ tọa độ'
+                : config.massVariable
+                    ? 'Khối lượng và mức Bohr biến thiên'
+                    : config.shockFreq > 0
+                        ? 'Xung lực ngẫu nhiên'
+                        : 'Điều khiển hạt',
+
         color: config.color,
         rotation: config.coordRotationSpeed > 0,
         reference: config
@@ -284,14 +440,22 @@ class IonTrapPhysicsEngine {
 
     class DisplayCompatibleEngine extends IonTrapPhysicsEngine {
         constructor() {
-            const logicalSize = 260 / 0.38;
+            // Bán kính logic cũ 260, tăng 1.5 lần thành 390.
+            const logicalSize =
+                (260 * ARENA_MULTIPLIER) / 0.38;
+
             super(logicalSize, logicalSize);
+
             this.stage = 1;
             this.dead = false;
         }
 
         reset() {
-            const fresh = new IonTrapPhysicsEngine(this.width, this.height);
+            const fresh = new IonTrapPhysicsEngine(
+                this.width,
+                this.height
+            );
+
             this.particle = fresh.particle;
             this.inputVector = fresh.inputVector;
             this.smoothInput = fresh.smoothInput;
@@ -301,6 +465,7 @@ class IonTrapPhysicsEngine {
             this.coordRotation = fresh.coordRotation;
             this.noiseTime = fresh.noiseTime;
             this.shockVector = fresh.shockVector;
+
             this.stage = 1;
             this.dead = false;
         }
@@ -308,20 +473,55 @@ class IonTrapPhysicsEngine {
         startStage(n) {
             this.stage = Math.max(1, Math.min(7, n));
             this.dead = false;
-            this.spawnRandomSafe(DECADE_CONFIGS[this.stage - 1]);
+
+            this.spawnRandomSafe(
+                DIFFICULTY_CONFIGS[this.stage - 1]
+            );
         }
 
-        get radius() { return this.trapRadius; }
-        get x() { return this.particle.pos.x - this.center.x; }
-        get y() { return this.particle.pos.y - this.center.y; }
-        get vx() { return this.particle.vel.x; }
-        get vy() { return this.particle.vel.y; }
-        get beta() { return this.inputVector.y * 30; }
-        get gamma() { return this.inputVector.x * 30; }
-        get t() { return this.stageTime; }
-        get mass() { return this.particle.mass; }
-        get bohrLevel() { return this.particle.bohrLevel; }
-        get afkWarnings() { return this.afk.warnings; }
+        get radius() {
+            return this.trapRadius;
+        }
+
+        get x() {
+            return this.particle.pos.x - this.center.x;
+        }
+
+        get y() {
+            return this.particle.pos.y - this.center.y;
+        }
+
+        get vx() {
+            return this.particle.vel.x;
+        }
+
+        get vy() {
+            return this.particle.vel.y;
+        }
+
+        get beta() {
+            return this.inputVector.y * 30;
+        }
+
+        get gamma() {
+            return this.inputVector.x * 30;
+        }
+
+        get t() {
+            return this.stageTime;
+        }
+
+        get mass() {
+            return this.particle.mass;
+        }
+
+        get bohrLevel() {
+            return this.particle.bohrLevel;
+        }
+
+        get afkWarnings() {
+            return this.afk.warnings;
+        }
 
         get trail() {
             return this.particle.trail.map(p => ({
@@ -331,9 +531,14 @@ class IonTrapPhysicsEngine {
         }
 
         get attractors() {
-            const c = DECADE_CONFIGS[this.stage - 1];
+            const c = DIFFICULTY_CONFIGS[this.stage - 1];
+
             return c.hasCenterBlackHole
-                ? [{ x: 0, y: 0, r: c.blackHoleRadius }]
+                ? [{
+                    x: 0,
+                    y: 0,
+                    r: c.blackHoleRadius
+                }]
                 : [];
         }
 
@@ -341,10 +546,21 @@ class IonTrapPhysicsEngine {
             if (this.dead) return null;
 
             let event = null;
+
             const callbacks = {
-                onAFKWarning: () => { event = 'afk_warning'; },
-                onDisqualify: () => { this.dead = true; event = 'afk'; },
-                onShockWave: () => { event = 'shock'; },
+                onAFKWarning: () => {
+                    event = 'afk_warning';
+                },
+
+                onDisqualify: () => {
+                    this.dead = true;
+                    event = 'afk';
+                },
+
+                onShockWave: () => {
+                    event = 'shock';
+                },
+
                 onGameOver: reason => {
                     this.dead = true;
                     event = reason.includes('HỐ ĐEN')
@@ -355,10 +571,11 @@ class IonTrapPhysicsEngine {
 
             super.update(
                 dt,
-                DECADE_CONFIGS[this.stage - 1],
+                DIFFICULTY_CONFIGS[this.stage - 1],
                 this.stageTime,
                 callbacks
             );
+
             return event;
         }
     }
@@ -367,6 +584,7 @@ class IonTrapPhysicsEngine {
         IonTrapPhysicsEngine: DisplayCompatibleEngine,
         OriginalIonTrapPhysicsEngine: IonTrapPhysicsEngine,
         DECADE_CONFIGS,
+        DIFFICULTY_CONFIGS,
         STAGES,
         STAGE_SECONDS
     };

@@ -3,6 +3,7 @@
     'use strict';
 
     const $ = id => document.getElementById(id);
+
     const {
         IonTrapPhysicsEngine,
         STAGES,
@@ -20,6 +21,7 @@
     let acc = 0;
     let last = performance.now();
     let lastState = null;
+    let fx = 0;
     let flash = 0;
 
     const canvas = $('arenaCanvas');
@@ -34,26 +36,38 @@
         $('overlayTitle').textContent = title;
         $('overlayText').textContent = description;
 
-        $('qrBox').classList.toggle('hidden', mode !== 'waiting');
-        $('countdown').classList.toggle('hidden', mode !== 'countdown');
-        $('startBtn').classList.toggle('hidden', mode !== 'waiting');
+        $('qrBox').classList.toggle(
+            'hidden', mode !== 'waiting'
+        );
+
+        $('countdown').classList.toggle(
+            'hidden', mode !== 'countdown'
+        );
+
+        $('startBtn').classList.toggle(
+            'hidden', mode !== 'waiting'
+        );
+
         $('nextBtn').classList.toggle(
-            'hidden',
-            mode !== 'clear' || stage >= 7
+            'hidden', mode !== 'clear' || stage >= 7
         );
-        $('rewardBtn').classList.toggle('hidden', mode !== 'clear');
+
+        $('rewardBtn').classList.toggle(
+            'hidden', mode !== 'clear'
+        );
+
         $('resetBtn').classList.toggle(
-            'hidden',
-            !['end', 'clear'].includes(mode)
+            'hidden', !['end', 'clear'].includes(mode)
         );
+
         $('overlayIcon').classList.toggle(
-            'hidden',
-            mode === 'countdown'
+            'hidden', mode === 'countdown'
         );
     }
 
     function updateUI() {
-        const conf = STAGES[Math.max(0, stage - 1)] || STAGES[0];
+        const conf =
+            STAGES[Math.max(0, stage - 1)] || STAGES[0];
 
         $('stageNumber').textContent =
             `${String(Math.max(stage, 1)).padStart(2, '0')} / 07`;
@@ -77,10 +91,12 @@
 
         $('roomChip').textContent = `ROOM ${room || '—'}`;
 
-        document.querySelectorAll('.stage-item').forEach((el, i) => {
-            el.classList.toggle('active', i === stage - 1);
-            el.classList.toggle('done', i < stage - 1);
-        });
+        document.querySelectorAll('.stage-item').forEach(
+            (el, i) => {
+                el.classList.toggle('active', i === stage - 1);
+                el.classList.toggle('done', i < stage - 1);
+            }
+        );
     }
 
     function createStages() {
@@ -117,7 +133,9 @@
         );
 
         $('serverStatus').textContent =
-            socket.connected ? 'SERVER ONLINE' : 'SERVER OFFLINE';
+            socket.connected
+                ? 'SERVER ONLINE'
+                : 'SERVER OFFLINE';
 
         if (status === 'WAITING' || status === 'PAUSED') {
             setOverlay(
@@ -203,7 +221,7 @@
             state(response.state);
 
             notice(
-                'Mở QR bằng điện thoại có Internet để tham gia.'
+                'Nếu dùng điện thoại khác, hãy mở địa chỉ máy chủ bằng IP LAN hoặc HTTPS.'
             );
         });
     }
@@ -295,7 +313,10 @@
 
         const event = engine.update(dt);
 
-        if (event === 'boundary' || event === 'attractor') {
+        if (
+            event === 'boundary' ||
+            event === 'attractor'
+        ) {
             status = 'ENDING';
 
             socket.emit('game_over', {
@@ -328,7 +349,11 @@
         }
 
         clock += dt;
-        remaining = Math.max(0, STAGE_SECONDS - clock);
+
+        remaining = Math.max(
+            0,
+            STAGE_SECONDS - clock
+        );
 
         if (remaining <= 0) {
             status = 'ENDING';
@@ -342,10 +367,12 @@
         const cx = w / 2;
         const cy = h / 2;
 
-        // Vòng tròn bằng 1/4 bán kính hiển thị ban đầu.
+        // Giữ tỷ lệ vẽ của bản trước.
+        // Bán kính mới lấy từ engine.radius = 390.
         const scale = 1.43 / 4;
 
-        const conf = STAGES[Math.max(stage - 1, 0)];
+        const conf =
+            STAGES[Math.max(stage - 1, 0)];
 
         ctx.clearRect(0, 0, w, h);
 
@@ -369,21 +396,28 @@
             ctx.stroke();
         }
 
-        // Viền bẫy
+        // Vòng Paul
         ctx.shadowColor = conf.color;
         ctx.shadowBlur = 25;
         ctx.strokeStyle = conf.color;
         ctx.lineWidth = 3;
 
         ctx.beginPath();
-        ctx.arc(0, 0, engine.radius, 0, Math.PI * 2);
+        ctx.arc(
+            0,
+            0,
+            engine.radius,
+            0,
+            Math.PI * 2
+        );
         ctx.stroke();
 
         ctx.shadowBlur = 0;
 
-        // Các vòng tham chiếu
+        // Vòng tham chiếu
         for (let r = 90; r < engine.radius; r += 82) {
-            ctx.strokeStyle = 'rgba(110,191,227,.13)';
+            ctx.strokeStyle =
+                'rgba(110,191,227,.13)';
             ctx.lineWidth = 1;
 
             ctx.beginPath();
@@ -391,12 +425,13 @@
             ctx.stroke();
         }
 
-        // Hiển thị trục quay
+        // Trục quay
         if (conf.rotation) {
             ctx.save();
             ctx.rotate(engine.t * .11);
 
-            ctx.strokeStyle = 'rgba(255,255,255,.25)';
+            ctx.strokeStyle =
+                'rgba(255,255,255,.25)';
 
             ctx.beginPath();
             ctx.moveTo(-engine.radius, 0);
@@ -415,7 +450,13 @@
             ctx.shadowBlur = 25;
 
             ctx.beginPath();
-            ctx.arc(a.x, a.y, a.r, 0, Math.PI * 2);
+            ctx.arc(
+                a.x,
+                a.y,
+                a.r,
+                0,
+                Math.PI * 2
+            );
             ctx.fill();
         }
 
@@ -424,7 +465,9 @@
         // Vệt chuyển động
         engine.trail.forEach((p, i) => {
             ctx.fillStyle =
-                `rgba(98,232,255,${(i + 1) / engine.trail.length * .25})`;
+                `rgba(98,232,255,${
+                    (i + 1) / engine.trail.length * .25
+                })`;
 
             ctx.beginPath();
             ctx.arc(
@@ -437,12 +480,15 @@
             ctx.fill();
         });
 
-        // Hạt giữ nguyên kích thước hiển thị ban đầu.
-        // Vì scale giảm 4 lần nên bán kính vẽ tăng 4 lần.
-        // Khối lượng biến thiên được giữ theo công thức gốc.
-        const massVariable = conf.reference.massVariable;
+        // Hạt giữ kích thước cũ.
+        // Tăng bán kính vẽ 4 lần để bù scale /4.
+        // Khi massVariable bật, bán kính đổi theo sqrt(m).
         const particleRadius =
-            48 * (massVariable ? Math.sqrt(engine.mass) : 1);
+            48 * (
+                conf.reference.massVariable
+                    ? Math.sqrt(engine.mass)
+                    : 1
+            );
 
         ctx.shadowColor = conf.color;
         ctx.shadowBlur = 28;
@@ -458,24 +504,37 @@
         );
         ctx.fill();
 
-        // Lõi trắng của hạt
+        // Lõi trắng
         ctx.shadowBlur = 0;
         ctx.fillStyle = '#fff';
 
         ctx.beginPath();
-        ctx.arc(engine.x, engine.y, 16, 0, Math.PI * 2);
+        ctx.arc(
+            engine.x,
+            engine.y,
+            16,
+            0,
+            Math.PI * 2
+        );
         ctx.fill();
 
         ctx.restore();
 
+        // Hiệu ứng nháy khi có sốc
         if (flash > 0) {
-            ctx.fillStyle = `rgba(255,60,85,${flash * .45})`;
+            ctx.fillStyle =
+                `rgba(255,60,85,${flash * .45})`;
+
             ctx.fillRect(0, 0, w, h);
         }
     }
 
     function frame(now) {
-        const dt = Math.min((now - last) / 1000, .1);
+        let dt = Math.min(
+            (now - last) / 1000,
+            .1
+        );
+
         last = now;
 
         if (status === 'PLAYING') {
@@ -495,7 +554,10 @@
         }
 
         if (flash > 0) {
-            flash = Math.max(0, flash - dt);
+            flash = Math.max(
+                0,
+                flash - dt
+            );
         }
 
         render();

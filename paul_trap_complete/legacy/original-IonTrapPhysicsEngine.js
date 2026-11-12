@@ -8,7 +8,7 @@ const DECADE_CONFIGS = [
     {
         decade: 2, years: "1966 - 1976", name: "Kháng chiến",
         friction: 0.85, massVariable: false, bohrLevelVariable: false,
-        shockFreq: 0.015, shockForceMin: 1000, shockForceMax: 2500, shockDuration: 0.05,
+        shockFreq: 0.01, shockForceMin: 1000, shockForceMax: 2000, shockDuration: 0.05,
         hasCenterBlackHole: false, coordRotationSpeed: 0, noiseAmp: 120, color: "#ff2a6d"
     },
     {
@@ -81,7 +81,7 @@ class IonTrapPhysicsEngine {
 
     spawnRandomSafe(stageConfig) {
         const minR = stageConfig.hasCenterBlackHole 
-            ? (stageConfig.blackHoleRadius + 35) 
+            ? (stageConfig.blackHoleRadius + 40) 
             : (this.trapRadius * 0.2);
         const maxR = this.trapRadius * 0.55;
 

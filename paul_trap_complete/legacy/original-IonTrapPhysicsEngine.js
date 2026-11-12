@@ -8,7 +8,7 @@ const DECADE_CONFIGS = [
     {
         decade: 2, years: "1966 - 1976", name: "Kháng chiến",
         friction: 0.80, massVariable: false, bohrLevelVariable: false,
-        shockFreq: 0.15, shockForceMin: 2200, shockForceMax: 3600, shockDuration: 0.15,
+        shockFreq: 0.15, shockForceMin: 2000, shockForceMax: 3000, shockDuration: 0.15,
         hasCenterBlackHole: false, coordRotationSpeed: 0, noiseAmp: 120, color: "#ff2a6d"
     },
     {
@@ -25,8 +25,8 @@ const DECADE_CONFIGS = [
     },
     {
         decade: 5, years: "1996 - 2006", name: "Hội nhập",
-        friction: 0.82, massVariable: false, bohrLevelVariable: false,
-        shockFreq: 0, hasCenterBlackHole: true, blackHoleRadius: 24, blackHoleStrength: 250000,
+        friction: 0.85, massVariable: false, bohrLevelVariable: false,
+        shockFreq: 0, hasCenterBlackHole: true, blackHoleRadius: 20 , blackHoleStrength: 200000,
         coordRotationSpeed: 0, noiseAmp: 110, color: "#a855f7"
     },
     {

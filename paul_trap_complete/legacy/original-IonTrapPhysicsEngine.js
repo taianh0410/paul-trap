@@ -7,8 +7,8 @@ const DECADE_CONFIGS = [
     },
     {
         decade: 2, years: "1966 - 1976", name: "Kháng chiến",
-        friction: 0.80, massVariable: false, bohrLevelVariable: false,
-        shockFreq: 0.015, shockForceMin: 1500, shockForceMax: 3000, shockDuration: 0.05,
+        friction: 0.85, massVariable: false, bohrLevelVariable: false,
+        shockFreq: 0.015, shockForceMin: 1000, shockForceMax: 2500, shockDuration: 0.05,
         hasCenterBlackHole: false, coordRotationSpeed: 0, noiseAmp: 120, color: "#ff2a6d"
     },
     {
@@ -26,20 +26,20 @@ const DECADE_CONFIGS = [
     {
         decade: 5, years: "1996 - 2006", name: "Hội nhập",
         friction: 0.85, massVariable: false, bohrLevelVariable: false,
-        shockFreq: 0, hasCenterBlackHole: true, blackHoleRadius: 20 , blackHoleStrength: 200000,
+        shockFreq: 0, hasCenterBlackHole: true, blackHoleRadius: 20 , blackHoleStrength: 150000,
         coordRotationSpeed: 0, noiseAmp: 110, color: "#a855f7"
     },
     {
         decade: 6, years: "2006 - 2016", name: "Vươn tầm",
-        friction: 0.82, massVariable: false, bohrLevelVariable: false,
+        friction: 0.85, massVariable: false, bohrLevelVariable: false,
         shockFreq: 0, hasCenterBlackHole: false,
         coordRotationSpeed: 0.02, noiseAmp: 120, color: "#ec4899"
     },
     {
         decade: 7, years: "2016 - 2026", name: "Chuyển đổi số (Quantum Chaos)",
-        friction: 0.995, massVariable: true, bohrLevelVariable: true,
-        shockFreq: 0.02, shockForceMin: 2200, shockForceMax: 3600, shockDuration: 0.15,
-        hasCenterBlackHole: true, blackHoleRadius: 36, blackHoleStrength: 450000,
+        friction: 0.95, massVariable: true, bohrLevelVariable: true,
+        shockFreq: 0.05, shockForceMin: 2500, shockForceMax: 3900, shockDuration: 0.05,
+        hasCenterBlackHole: true, blackHoleRadius: 30, blackHoleStrength: 300000,
         coordRotationSpeed: 0.045, noiseAmp: 160, isChaos: true, color: "#39ff14"
     }
 ];

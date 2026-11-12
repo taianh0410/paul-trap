@@ -8,7 +8,7 @@ const DECADE_CONFIGS = [
     {
         decade: 2, years: "1966 - 1976", name: "Kháng chiến",
         friction: 0.80, massVariable: false, bohrLevelVariable: false,
-        shockFreq: 0.15, shockForceMin: 2000, shockForceMax: 3000, shockDuration: 0.15,
+        shockFreq: 0.015, shockForceMin: 1500, shockForceMax: 3000, shockDuration: 0.05,
         hasCenterBlackHole: false, coordRotationSpeed: 0, noiseAmp: 120, color: "#ff2a6d"
     },
     {
